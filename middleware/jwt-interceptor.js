@@ -13,7 +13,7 @@ function intercept(requete, resultat, next) {
     }
 
     const jwtParts = token.split("."); //decoupe le jwt en 3 parties
-    const jwtBodyBase64 = jwtParts[1]; // recupere la partie data du jwt
+    const jwtBodyBase64 = jwtParts[1]; // recupere la partie data du jwt  
     const jwtBodyDecoded = atob(jwtBodyBase64); //decode la base 64
     const body = JSON.parse(jwtBodyDecoded); // on transforme le JSON en objet javascript
 

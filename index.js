@@ -31,7 +31,7 @@ app.get("/", (requete, resultat) => {
 
 app.get("/rides/list", (requete, resultat) => {
   connection.query(
-    "SELECT * FROM rides r JOIN accounts a ON r.accounts_id= a.accounts_id ORDER BY rides_departure_time DESC",
+    "SELECT r.*, accounts_fullname FROM rides r JOIN accounts a ON r.accounts_id= a.accounts_id ORDER BY rides_departure_time DESC",
     (err, lignes) => {
       if (err) {
         console.error(err);
@@ -82,7 +82,63 @@ app.get("/bookings/me", interceptor, (requete, resultat) => {
     }
   );
 });
+app.put("/bookings/me", interceptor, (requete, resultat) => {
+  const bookings = requete.body;
+  console.log(bookings);
+  if (
+    bookings.bookings_id == null ||
+    bookings.bookings_status == null ||
+    !["accepted", "refused"].includes(bookings.bookings_status)
+  ) {
+    console.log("error is there");
+    return resultat.sendStatus(400);
+  }
+  connection.query(
+    "SELECT * FROM bookings WHERE bookings_id = ? ",
+    [bookings.bookings_id],
+    (err, lignes) => {
+      if (err) {
+        console.log(err);
+        return resultat.sendStatus(500);
+      }
+      if (!lignes[0]) {
+        return resultat.sendStatus(400);
+      }
+      if (lignes[0]["bookings_sender_id"] != requete.user.id) {
+        return resultat.sendStatus(403);
+      }
+    }
+  );
+  connection.query(
+    "UPDATE bookings SET bookings_status = ? WHERE bookings_id = ?",
+    [bookings.bookings_status, bookings.bookings_id],
+    (err, lignes) => {
+      if (err) {
+        console.error(err);
+        return resultat.sendStatus(500);
+      }
+      resultat.status(201).json(bookings);
+    }
+  );
+});
+app.post("/bookings", interceptor, (requete, resultat) => {
+  const bookings = requete.body;
+  if (bookings.rides_id == null) {
+    return resultat.sendStatus(400);
+  }
+  connection.query(
+    "INSERT INTO bookings (rides_id,bookings_sender_id) VALUES (?, ?)",
+    [bookings.rides_id, requete.user.id],
+    (err, lignes) => {
+      if (err) {
+        console.error(err);
+        return resultat.sendStatus(500);
+      }
 
+      resultat.status(201).json(bookings);
+    }
+  );
+});
 app.get("/rides/:id", (requete, resultat) => {
   connection.query(
     "SELECT * FROM rides WHERE rides_id = ?",
