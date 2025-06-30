@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : ven. 27 juin 2025 à 10:01
+-- Généré le : lun. 30 juin 2025 à 14:00
 -- Version du serveur : 9.1.0
 -- Version de PHP : 8.2.26
 
@@ -37,14 +37,15 @@ CREATE TABLE IF NOT EXISTS `accounts` (
   PRIMARY KEY (`accounts_id`),
   UNIQUE KEY `accounts_email` (`accounts_email`),
   KEY `FK_accounts_roles` (`roles_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `accounts`
 --
 
 INSERT INTO `accounts` (`accounts_id`, `accounts_fullname`, `accounts_email`, `accounts_password`, `roles_id`) VALUES
-(1, 'John', 'a@a', '$2b$10$hC9lZRFmIAFdDWkWfJMGvuasMpsAqSLf5.UAR3NQXh/P5.5i3F46W', 2);
+(1, 'John', 'a@a', '$2b$10$hC9lZRFmIAFdDWkWfJMGvuasMpsAqSLf5.UAR3NQXh/P5.5i3F46W', 2),
+(2, '', 'b@b', '$2b$10$9t5C0OgrnkKChgaPmJAKTONjfUWUPrxIFAn092yrKAeXE1jaU1jZa', 2);
 
 -- --------------------------------------------------------
 
@@ -55,20 +56,27 @@ INSERT INTO `accounts` (`accounts_id`, `accounts_fullname`, `accounts_email`, `a
 DROP TABLE IF EXISTS `bookings`;
 CREATE TABLE IF NOT EXISTS `bookings` (
   `bookings_id` int NOT NULL AUTO_INCREMENT,
-  `bookings_status` varchar(250) NOT NULL,
+  `bookings_status` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending',
   `rides_id` int NOT NULL,
   `bookings_sender_id` int NOT NULL,
   PRIMARY KEY (`bookings_id`),
   KEY `FK_bookings_accounts` (`bookings_sender_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `bookings`
 --
 
 INSERT INTO `bookings` (`bookings_id`, `bookings_status`, `rides_id`, `bookings_sender_id`) VALUES
-(1, 'pending', 4, 1),
-(2, 'pending', 5, 1);
+(2, 'accepted', 5, 1),
+(3, 'pending', 5, 1),
+(4, 'refused', 4, 1),
+(5, 'pending', 5, 1),
+(6, 'pending', 5, 1),
+(7, 'pending', 5, 1),
+(8, 'refused', 4, 1),
+(9, 'accepted', 4, 1),
+(10, 'refused', 6, 1);
 
 -- --------------------------------------------------------
 
@@ -142,15 +150,14 @@ CREATE TABLE IF NOT EXISTS `rides` (
   `accounts_id` int NOT NULL,
   PRIMARY KEY (`rides_id`),
   KEY `FK_rides_accounts` (`accounts_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `rides`
 --
 
 INSERT INTO `rides` (`rides_id`, `rides_departure`, `rides_destination`, `rides_seats`, `rides_departure_time`, `vehicules_id`, `accounts_id`) VALUES
-(4, '1, Rue de la Paix, Paris', '2, Rue de la Paix, Parisa', 2, '2025-07-02T08:30', 0, 1),
-(5, '2 Rue de la paix Paris', '3  Rue de la paix Paris', 4, '2025-07-03T08:00', 0, 1);
+(7, '1, Rue de la Paix, Paris', '2, Rue de la Paix', 3, '2025-07-03T08:00', 0, 1);
 
 -- --------------------------------------------------------
 
