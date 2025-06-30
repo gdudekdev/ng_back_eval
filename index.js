@@ -85,6 +85,7 @@ app.get("/bookings/me", interceptor, (requete, resultat) => {
 app.put("/bookings/me", interceptor, (requete, resultat) => {
   const bookings = requete.body;
   console.log(bookings);
+
   if (
     bookings.bookings_id == null ||
     bookings.bookings_status == null ||
@@ -93,34 +94,38 @@ app.put("/bookings/me", interceptor, (requete, resultat) => {
     console.log("error is there");
     return resultat.sendStatus(400);
   }
+
   connection.query(
-    "SELECT * FROM bookings WHERE bookings_id = ? ",
+    "SELECT b.*, r.accounts_id FROM bookings b JOIN rides r ON b.rides_id = r.rides_id WHERE bookings_id = ?",
     [bookings.bookings_id],
-    (err, lignes) => {
-      if (err) {
-        console.log(err);
-        return resultat.sendStatus(500);
-      }
-      if (!lignes[0]) {
-        return resultat.sendStatus(400);
-      }
-      if (lignes[0]["bookings_sender_id"] != requete.user.id) {
-        return resultat.sendStatus(403);
-      }
-    }
-  );
-  connection.query(
-    "UPDATE bookings SET bookings_status = ? WHERE bookings_id = ?",
-    [bookings.bookings_status, bookings.bookings_id],
     (err, lignes) => {
       if (err) {
         console.error(err);
         return resultat.sendStatus(500);
       }
-      resultat.status(201).json(bookings);
+      if (!lignes.length>0) {
+        return resultat.sendStatus(400);
+      }
+      if (lignes[0].accounts_id != requete.user.id) {
+        return resultat.sendStatus(403);
+      }
+
+      // Now safe to perform update
+      connection.query(
+        "UPDATE bookings SET bookings_status = ? WHERE bookings_id = ?",
+        [bookings.bookings_status, bookings.bookings_id],
+        (err, result) => {
+          if (err) {
+            console.error(err);
+            return resultat.sendStatus(500);
+          }
+          return resultat.status(201).json(bookings);
+        }
+      );
     }
   );
 });
+
 app.post("/bookings", interceptor, (requete, resultat) => {
   const bookings = requete.body;
   if (bookings.rides_id == null) {
@@ -139,6 +144,42 @@ app.post("/bookings", interceptor, (requete, resultat) => {
     }
   );
 });
+app.delete("/bookings/:id",interceptor, (requete,resultat)=>{
+   connection.query(
+    "SELECT * FROM bookings WHERE bookings_id = ?",
+    [requete.params.id],
+    (erreur, lignes) => {
+      if (erreur) {
+        console.error(err);
+        return resultat.sendStatus(500);
+      }
+      console.log(lignes);
+      if (lignes.length == 0) {
+        return resultat.sendStatus(404);
+      }
+
+      const estProprietaire =
+        requete.user.role == "user" && requete.user.id == lignes[0].bookings_sender_id;
+
+      if (!estProprietaire && requete.user.role != "admin") {
+        return resultat.sendStatus(403);
+      }
+
+      connection.query(
+        "DELETE FROM bookings WHERE bookings_id = ?",
+        [requete.params.id],
+        (erreur, lignes) => {
+          if (erreur) {
+            console.error(err);
+            return resultat.sendStatus(500);
+          }
+
+          return resultat.sendStatus(204);
+        }
+      );
+    }
+  );
+})
 app.get("/rides/:id", (requete, resultat) => {
   connection.query(
     "SELECT * FROM rides WHERE rides_id = ?",
@@ -153,6 +194,42 @@ app.get("/rides/:id", (requete, resultat) => {
       }
 
       return resultat.json(lignes[0]);
+    }
+  );
+});
+app.post("/rides", interceptor, (requete, resultat) => {
+  const rides = requete.body;
+  const nowPlus24h = Date.now() + 24 * 60 * 60 * 1000;
+  if (
+    rides.rides_departure == null ||
+    rides.rides_destination == null ||
+    rides.rides_seats == null ||
+    rides.rides_departure_time == null ||
+    new Date(rides.rides_departure_time).getTime() < nowPlus24h ||
+    rides.rides_destination.length > 40 ||
+    rides.rides_departure.length > 40 ||
+    rides.rides_seats < 1 ||
+    rides.rides_departure == "" ||
+    rides.rides_destination == ""
+  ) {
+    return resultat.sendStatus(400);
+  }
+  connection.query(
+    "INSERT INTO rides (rides_departure, rides_destination, rides_seats, rides_departure_time, accounts_id) VALUES (?, ?, ?, ?, ?)",
+    [
+      rides.rides_departure,
+      rides.rides_destination,
+      rides.rides_seats,
+      rides.rides_departure_time,
+      requete.user.id,
+    ],
+    (err, lignes) => {
+      if (err) {
+        console.error(err);
+        return resultat.sendStatus(500);
+      }
+      
+      resultat.status(201).json(rides);
     }
   );
 });
@@ -204,44 +281,6 @@ app.put("/rides/:id", interceptor, (requete, resultat) => {
     }
   );
 });
-
-app.post("/rides", interceptor, (requete, resultat) => {
-  const rides = requete.body;
-  const nowPlus24h = Date.now() + 24 * 60 * 60 * 1000;
-  if (
-    rides.rides_departure == null ||
-    rides.rides_destination == null ||
-    rides.rides_seats == null ||
-    rides.rides_departure_time == null ||
-    new Date(rides.rides_departure_time).getTime() < nowPlus24h ||
-    rides.rides_destination.length > 40 ||
-    rides.rides_departure.length > 40 ||
-    rides.rides_seats < 1 ||
-    rides.rides_departure == "" ||
-    rides.rides_destination == ""
-  ) {
-    return resultat.sendStatus(400);
-  }
-  connection.query(
-    "INSERT INTO rides (rides_departure, rides_destination, rides_seats, rides_departure_time, accounts_id) VALUES (?, ?, ?, ?, ?)",
-    [
-      rides.rides_departure,
-      rides.rides_destination,
-      rides.rides_seats,
-      rides.rides_departure_time,
-      requete.user.id,
-    ],
-    (err, lignes) => {
-      if (err) {
-        console.error(err);
-        return resultat.sendStatus(500);
-      }
-
-      resultat.status(201).json(rides);
-    }
-  );
-});
-
 app.delete("/rides/:id", interceptor, (requete, resultat) => {
   connection.query(
     "SELECT * FROM rides WHERE rides_id = ?",
@@ -251,7 +290,7 @@ app.delete("/rides/:id", interceptor, (requete, resultat) => {
         console.error(err);
         return resultat.sendStatus(500);
       }
-
+      
       if (lignes.length == 0) {
         return resultat.sendStatus(404);
       }
